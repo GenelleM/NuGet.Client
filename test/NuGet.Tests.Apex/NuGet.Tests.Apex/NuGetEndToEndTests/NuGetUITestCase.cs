@@ -5,12 +5,12 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Test.Apex.VisualStudio.Solution;
 using NuGet.Test.Utility;
-using Xunit;
-using Xunit.Abstractions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace NuGet.Tests.Apex
 {
-    public class NuGetUITestCase : SharedVisualStudioHostTestClass, IClassFixture<VisualStudioHostFixtureFactory>
+    [TestClass]
+    public class NuGetUITestCase : SharedVisualStudioHostTestClass
     {
         private const string TestPackageName = "Contoso.A";
         private const string TestPackageVersionV1 = "1.0.0";
@@ -20,13 +20,19 @@ namespace NuGet.Tests.Apex
 
         private readonly SimpleTestPathContext _pathContext = new SimpleTestPathContext();
 
-        public NuGetUITestCase(VisualStudioHostFixtureFactory visualStudioHostFixtureFactory, ITestOutputHelper output)
-            : base(visualStudioHostFixtureFactory, output)
+        private const int TestTimeoutLimit = 5 * 60 * 1000; // 5 minutes
+
+        private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(10);
+        private static readonly TimeSpan Interval = TimeSpan.FromSeconds(2);
+
+        public NuGetUITestCase()
+            : base()
         {
         }
 
-        [StaFact]
-        public async Task SearchPackageFromUI()
+        [TestMethod]
+        [Timeout(TestTimeoutLimit)]
+        public void SearchPackageFromUI()
         {
             // Arrange
             await CommonUtility.CreatePackageInSourceAsync(_pathContext.PackageSource, TestPackageName, TestPackageVersionV1);
@@ -50,8 +56,9 @@ namespace NuGet.Tests.Apex
             VisualStudio.AssertNoErrors();
         }
 
-        [StaFact]
-        public async Task InstallPackageFromUI()
+        [TestMethod]
+        [Timeout(TestTimeoutLimit)]
+        public void InstallPackageFromUI()
         {
             // Arrange
             await CommonUtility.CreatePackageInSourceAsync(_pathContext.PackageSource, TestPackageName, TestPackageVersionV1);
@@ -71,11 +78,12 @@ namespace NuGet.Tests.Apex
             uiwindow.InstallPackageFromUI(TestPackageName, TestPackageVersionV1);
 
             // Assert
-            CommonUtility.AssertPackageInPackagesConfig(VisualStudio, project, TestPackageName, TestPackageVersionV1, XunitLogger);
+            CommonUtility.AssertPackageInPackagesConfig(VisualStudio, project, TestPackageName, TestPackageVersionV1);
         }
 
-        [StaFact]
-        public async Task InstallPackageToProjectsFromUI()
+        [TestMethod]
+        [Timeout(TestTimeoutLimit)]
+        public void InstallPackageToProjectsFromUI()
         {
             // Arrange
             await CommonUtility.CreatePackageInSourceAsync(_pathContext.PackageSource, TestPackageName, TestPackageVersionV1);
@@ -102,12 +110,13 @@ namespace NuGet.Tests.Apex
             uiwindow2.InstallPackageFromUI(TestPackageName, TestPackageVersionV1);
 
             // Assert
-            CommonUtility.AssertPackageInPackagesConfig(VisualStudio, project, TestPackageName, TestPackageVersionV1, XunitLogger);
-            CommonUtility.AssertPackageInPackagesConfig(VisualStudio, nuProject, TestPackageName, TestPackageVersionV1, XunitLogger);
+            CommonUtility.AssertPackageInPackagesConfig(VisualStudio, project, TestPackageName, TestPackageVersionV1);
+            CommonUtility.AssertPackageInPackagesConfig(VisualStudio, nuProject, TestPackageName, TestPackageVersionV1);
         }
 
-        [StaFact]
-        public async Task UninstallPackageFromUI()
+        [TestMethod]
+        [Timeout(TestTimeoutLimit)]
+        public void UninstallPackageFromUI()
         {
             // Arrange
             await CommonUtility.CreatePackageInSourceAsync(_pathContext.PackageSource, TestPackageName, TestPackageVersionV1);
@@ -135,11 +144,12 @@ namespace NuGet.Tests.Apex
             CommonUtility.WaitForFileNotExists(packagesConfigFile);
 
             // Assert
-            CommonUtility.AssertPackageNotInPackagesConfig(VisualStudio, project, TestPackageName, XunitLogger);
+            CommonUtility.AssertPackageNotInPackagesConfig(VisualStudio, project, TestPackageName);
         }
 
-        [StaFact]
-        public async Task UpdatePackageFromUI()
+        [TestMethod]
+        [Timeout(TestTimeoutLimit)]
+        public void UpdatePackageFromUI()
         {
             // Arrange
             await CommonUtility.CreatePackageInSourceAsync(_pathContext.PackageSource, TestPackageName, TestPackageVersionV1);
@@ -164,10 +174,11 @@ namespace NuGet.Tests.Apex
             uiwindow.UpdatePackageFromUI(TestPackageName, TestPackageVersionV2);
 
             // Assert
-            CommonUtility.AssertPackageInPackagesConfig(VisualStudio, project, TestPackageName, TestPackageVersionV2, XunitLogger);
+            CommonUtility.AssertPackageInPackagesConfig(VisualStudio, project, TestPackageName, TestPackageVersionV2);
         }
 
-        [StaFact]
+        [TestMethod]
+        [Timeout(TestTimeoutLimit)]
         public async Task InstallPackageFromUI_PC_PackageSourceMapping_WithSingleFeed_Match_Succeeds()
         {
             // Arrange
@@ -191,10 +202,11 @@ namespace NuGet.Tests.Apex
             uiwindow.InstallPackageFromUI(TestPackageName, TestPackageVersionV1);
 
             // Assert
-            CommonUtility.AssertPackageInPackagesConfig(VisualStudio, project, TestPackageName, TestPackageVersionV1, XunitLogger);
+            CommonUtility.AssertPackageInPackagesConfig(VisualStudio, project, TestPackageName, TestPackageVersionV1);
         }
 
-        [StaFact]
+        [TestMethod]
+        [Timeout(TestTimeoutLimit)]
         public async Task InstallPackageToProjectsFromUI_PC_PackageSourceMapping_WithSingleFeed_Match_Succeeds()
         {
             // Arrange
@@ -223,11 +235,12 @@ namespace NuGet.Tests.Apex
             uiwindow2.InstallPackageFromUI(TestPackageName, TestPackageVersionV1);
 
             // Assert
-            CommonUtility.AssertPackageInPackagesConfig(VisualStudio, project, TestPackageName, TestPackageVersionV1, XunitLogger);
-            CommonUtility.AssertPackageInPackagesConfig(VisualStudio, nuProject, TestPackageName, TestPackageVersionV1, XunitLogger);
+            CommonUtility.AssertPackageInPackagesConfig(VisualStudio, project, TestPackageName, TestPackageVersionV1);
+            CommonUtility.AssertPackageInPackagesConfig(VisualStudio, nuProject, TestPackageName, TestPackageVersionV1);
         }
 
-        [StaFact]
+        [TestMethod]
+        [Timeout(TestTimeoutLimit)]
         public async Task InstallPackageFromUI_PC_PackageSourceMapping_WithMultiFeed_Succeed()
         {
             // Arrange
@@ -259,10 +272,11 @@ namespace NuGet.Tests.Apex
             uiwindow.InstallPackageFromUI(TestPackageName, TestPackageVersionV1);
 
             // Assert
-            CommonUtility.AssertPackageInPackagesConfig(VisualStudio, project, "contoso.a", XunitLogger);
+            CommonUtility.AssertPackageInPackagesConfig(VisualStudio, project, "contoso.a");
         }
 
-        [StaFact]
+        [TestMethod]
+        [Timeout(TestTimeoutLimit)]
         public async Task InstallPackageFromUI_PC_PackageSourceMapping_WithMultiFeed_Fails()
         {
             // Arrange
@@ -290,11 +304,12 @@ namespace NuGet.Tests.Apex
             uiwindow.InstallPackageFromUI(TestPackageName, TestPackageVersionV1);
 
             // Assert
-            // Even though Contoso.a exist in ExternalRepository, but packageSourceMapping filter doesn't let restore from it.
-            CommonUtility.AssertPackageNotInPackagesConfig(VisualStudio, project, "contoso.a", XunitLogger);
+            // Even though Contoso.a exist in ExternalRepository, but PackageNamespaces filter doesn't let restore from it.
+            CommonUtility.AssertPackageNotInPackagesConfig(VisualStudio, project, "contoso.a");
         }
 
-        [StaFact]
+        [TestMethod]
+        [Timeout(TestTimeoutLimit)]
         public async Task UpdatePackageFromUI_PC_PackageSourceMapping_WithSingleFeed_Succeeds()
         {
             // Arrange
@@ -322,11 +337,12 @@ namespace NuGet.Tests.Apex
             uiwindow.UpdatePackageFromUI(TestPackageName, TestPackageVersionV2);
 
             // Assert
-            CommonUtility.AssertPackageInPackagesConfig(VisualStudio, project, TestPackageName, TestPackageVersionV2, XunitLogger);
+            CommonUtility.AssertPackageInPackagesConfig(VisualStudio, project, TestPackageName, TestPackageVersionV2);
         }
 
 
-        [StaFact]
+        [TestMethod]
+        [Timeout(TestTimeoutLimit)]
         public async Task UpdatePackageFromUI_PC_PackageSourceMapping_WithMultiFeed_Succeed()
         {
             // Arrange
@@ -361,7 +377,7 @@ namespace NuGet.Tests.Apex
             uiwindow.InstallPackageFromUI(TestPackageName, TestPackageVersionV2);
 
             // Assert
-            CommonUtility.AssertPackageInPackagesConfig(VisualStudio, project, TestPackageName, TestPackageVersionV2, XunitLogger);
+            CommonUtility.AssertPackageInPackagesConfig(VisualStudio, project, TestPackageName, TestPackageVersionV2);
         }
 
         public override void Dispose()
@@ -530,7 +546,7 @@ namespace NuGet.Tests.Apex
             uiwindow.InstallPackageFromUI(TestPackageName, TestPackageVersionV1);
             uiwindow.SwitchTabToUpdate();
             uiwindow.SearchPackageFromUI(TestPackageName);
-            
+
             // Assert
             VisualStudio.AssertNoErrors();
             uiwindow.AssertSearchedPackageItem(tabName, TestPackageName, TestPackageVersionV2);

@@ -2,43 +2,47 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Test.Apex.VisualStudio.Solution;
-using NuGet.StaFact;
 using NuGet.Test.Utility;
-using Xunit;
-using Xunit.Abstractions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace NuGet.Tests.Apex
 {
-    public class NetCoreProjectTestCase : SharedVisualStudioHostTestClass, IClassFixture<VisualStudioHostFixtureFactory>
+    [TestClass]
+    public class NetCoreProjectTestCase : SharedVisualStudioHostTestClass
     {
-        public NetCoreProjectTestCase(VisualStudioHostFixtureFactory visualStudioHostFixtureFactory, ITestOutputHelper output)
-            : base(visualStudioHostFixtureFactory, output)
+        private const int Timeout = 5 * 60 * 1000; // 5 minutes
+
+        public NetCoreProjectTestCase()
+            : base()
         {
         }
 
         // basic create for .net core template
-        [NuGetWpfTheory(Skip = "https://github.com/NuGet/Home/issues/11308")]
-        [MemberData(nameof(GetNetCoreTemplates))]
-        public void CreateNetCoreProject_RestoresNewProject(ProjectTemplate projectTemplate)
+        [TestMethod]
+        [Timeout(Timeout)]
+        public void CreateNetCoreProject_RestoresNewProject()
         {
             // Arrange
             EnsureVisualStudioHost();
 
-            using (var testContext = new ApexTestContext(VisualStudio, projectTemplate, XunitLogger, addNetStandardFeeds: true))
+            ProjectTemplate projectTemplate = ProjectTemplate.NetStandardClassLib;
+            using (var testContext = new ApexTestContext(VisualStudio, projectTemplate, addNetStandardFeeds: true))
             {
                 VisualStudio.AssertNoErrors();
             }
         }
 
         // basic create for .net core template
-        [NuGetWpfTheory(Skip = "https://github.com/NuGet/Home/issues/9410")]
-        [MemberData(nameof(GetNetCoreTemplates))]
-        public void CreateNetCoreProject_AddProjectReference(ProjectTemplate projectTemplate)
+        [Ignore] //https://github.com/NuGet/Home/issues/9410
+        [TestMethod]
+        [Timeout(Timeout)]
+        public void CreateNetCoreProject_AddProjectReference()
         {
             // Arrange
             EnsureVisualStudioHost();
 
-            using (var testContext = new ApexTestContext(VisualStudio, projectTemplate, XunitLogger, addNetStandardFeeds: true))
+            ProjectTemplate projectTemplate = ProjectTemplate.NetStandardClassLib;
+            using (var testContext = new ApexTestContext(VisualStudio, projectTemplate, addNetStandardFeeds: true))
             {
                 var project2 = testContext.SolutionService.AddProject(ProjectLanguage.CSharp, projectTemplate, ProjectTargetFramework.V46, "TestProject2");
                 project2.Build();
@@ -50,7 +54,7 @@ namespace NuGet.Tests.Apex
                 testContext.NuGetApexTestService.WaitForAutoRestore();
 
                 VisualStudio.AssertNoErrors();
-                CommonUtility.AssertPackageInAssetsFile(VisualStudio, testContext.Project, "TestProject2", "1.0.0", XunitLogger);
+                CommonUtility.AssertPackageInAssetsFile(VisualStudio, testContext.Project, "TestProject2", "1.0.0");
             }
         }
 
@@ -179,7 +183,7 @@ namespace NuGet.Tests.Apex
                     VisualStudio.ClearWindows();
 
                     // Act
-                    uiwindow.UpdatePackageFromUI(packageName, packageVersion2);                    
+                    uiwindow.UpdatePackageFromUI(packageName, packageVersion2);
 
                     // Assert
                     VisualStudio.AssertNuGetOutputDoesNotHaveErrors();
@@ -242,7 +246,7 @@ namespace NuGet.Tests.Apex
                     var uiwindow = nugetTestService.GetUIWindowfromProject(testContext.SolutionService.Projects[0]);
                     uiwindow.InstallPackageFromUI(packageName, packageVersion);
 
-                    // Assert                    
+                    // Assert
                     CommonUtility.AssertPackageReferenceDoesNotExist(VisualStudio, testContext.SolutionService.Projects[0], packageName, packageVersion, XunitLogger);
                 }
             }
