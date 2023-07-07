@@ -29,7 +29,7 @@ namespace NuGet.Tests.Apex
 
         [TestMethod]
         [Timeout(TestTimeoutLimit)]
-        public async void SearchPackageFromUI()
+        public async Task SearchPackageFromUI()
         {
             // Arrange
             await CommonUtility.CreatePackageInSourceAsync(_pathContext.PackageSource, TestPackageName, TestPackageVersionV1);
@@ -55,7 +55,7 @@ namespace NuGet.Tests.Apex
 
         [TestMethod]
         [Timeout(TestTimeoutLimit)]
-        public async void InstallPackageFromUI()
+        public async Task InstallPackageFromUI()
         {
             // Arrange
             await CommonUtility.CreatePackageInSourceAsync(_pathContext.PackageSource, TestPackageName, TestPackageVersionV1);
@@ -80,7 +80,7 @@ namespace NuGet.Tests.Apex
 
         [TestMethod]
         [Timeout(TestTimeoutLimit)]
-        public async void InstallPackageToProjectsFromUI()
+        public async Task InstallPackageToProjectsFromUI()
         {
             // Arrange
             await CommonUtility.CreatePackageInSourceAsync(_pathContext.PackageSource, TestPackageName, TestPackageVersionV1);
@@ -113,7 +113,7 @@ namespace NuGet.Tests.Apex
 
         [TestMethod]
         [Timeout(TestTimeoutLimit)]
-        public async void UninstallPackageFromUI()
+        public async Task UninstallPackageFromUI()
         {
             // Arrange
             await CommonUtility.CreatePackageInSourceAsync(_pathContext.PackageSource, TestPackageName, TestPackageVersionV1);
@@ -146,7 +146,7 @@ namespace NuGet.Tests.Apex
 
         [TestMethod]
         [Timeout(TestTimeoutLimit)]
-        public async void UpdatePackageFromUI()
+        public async Task UpdatePackageFromUI()
         {
             // Arrange
             await CommonUtility.CreatePackageInSourceAsync(_pathContext.PackageSource, TestPackageName, TestPackageVersionV1);
