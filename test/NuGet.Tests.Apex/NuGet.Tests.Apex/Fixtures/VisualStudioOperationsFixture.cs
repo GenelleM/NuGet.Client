@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.Test.Apex;
+using Microsoft.Test.Apex.Hosts;
 using Microsoft.Test.Apex.Services;
 using Microsoft.Test.Apex.VisualStudio;
 using NuGet.Console.TestContract;
