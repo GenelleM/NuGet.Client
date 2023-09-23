@@ -42,7 +42,9 @@ namespace NuGet.Tests.Apex
                     _visualStudioHostConfiguration = new VisualStudioHostConfiguration()
                     {
                         InheritProcessEnvironment = true,
-                        InProcessHostConstraints = new List<ITypeConstraint>() { new NuGetTypeConstraint() }
+                        InProcessHostConstraints = new List<ITypeConstraint>() { new NuGetTypeConstraint() },
+                        RemoteInjectionPolicy = RemoteInjectionPolicy.Never,
+                        DebuggerCaptureCrashDumps = true
                     };
 
                     string[] compositionAssemblies = new[]
