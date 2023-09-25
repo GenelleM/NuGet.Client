@@ -44,8 +44,7 @@ namespace NuGet.Tests.Apex
                     {
                         InheritProcessEnvironment = true,
                         InProcessHostConstraints = new List<ITypeConstraint>() { new NuGetTypeConstraint() },
-                        RemoteInjectionPolicy = RemoteInjectionPolicy.Never,
-                        DebuggerCaptureCrashDumps = true
+                        RemoteInjectionPolicy = RemoteInjectionPolicy.Never
                     };
 
                     string[] compositionAssemblies = new[]
