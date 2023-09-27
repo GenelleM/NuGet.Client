@@ -220,6 +220,9 @@
       <Settings>
         <MapInconclusiveToFailed>True</MapInconclusiveToFailed>
         <CaptureTraceOutput>True</CaptureTraceOutput>
+        <AssemblyResolution>
+          <Directory path="C:\Test\Containers\NuGet.Tests.Apex\" includeSubDirectories="true"/>
+        </AssemblyResolution>
       </Settings>
     </AdditionalSettings>
   </ItemGroup>
