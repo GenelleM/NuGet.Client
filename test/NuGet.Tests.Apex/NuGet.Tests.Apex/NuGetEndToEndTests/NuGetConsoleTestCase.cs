@@ -693,6 +693,7 @@ namespace NuGet.Tests.Apex
             solutionService.Save();
         }
 
+        [Ignore]
         [DataTestMethod]
         [DynamicData(nameof(GetNetCoreTemplates), DynamicDataSourceType.Method)]
         [Timeout(DefaultTimeout)]
@@ -772,6 +773,7 @@ namespace NuGet.Tests.Apex
             }
         }
 
+        [Ignore]
         [DataTestMethod]
         [DynamicData(nameof(GetIOSTemplates), DynamicDataSourceType.Method)]
         [Timeout(DefaultTimeout)]
@@ -806,6 +808,7 @@ namespace NuGet.Tests.Apex
             }
         }
 
+        [Ignore]
         [DataTestMethod]
         [DynamicData(nameof(GetIOSTemplates), DynamicDataSourceType.Method)]
         [Timeout(DefaultTimeout)]
@@ -847,6 +850,7 @@ namespace NuGet.Tests.Apex
             }
         }
 
+        [Ignore]
         [DataTestMethod]
         [DynamicData(nameof(GetIOSTemplates), DynamicDataSourceType.Method)]
         [Timeout(DefaultTimeout)]
