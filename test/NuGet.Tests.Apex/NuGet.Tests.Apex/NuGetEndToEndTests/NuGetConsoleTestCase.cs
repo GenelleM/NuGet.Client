@@ -701,7 +701,7 @@ namespace NuGet.Tests.Apex
             // Arrange
             EnsureVisualStudioHost();
 
-            using (var testContext = new ApexTestContext(VisualStudio, projectTemplate, Logger))
+            using (var testContext = new ApexTestContext(VisualStudio, projectTemplate, Logger, addNetStandardFeeds: true))
             {
                 var packageName = "VerifyCacheFilePackage";
                 var packageVersion = "1.0.0";
