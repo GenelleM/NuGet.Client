@@ -787,6 +787,7 @@ namespace NuGet.Tests.Apex
             uiwindow.InstallPackageFromUI("log4net", "2.0.15");
             uiwindow.InstallPackageFromUI(transitivePackage, "2.0.0");
             uiwindow.SearchPackageFromUI(transitivePackage);
+            solutionService.Build();
 
             // Assert
             VisualStudio.AssertNoErrors();
@@ -815,6 +816,7 @@ namespace NuGet.Tests.Apex
             uiwindow.InstallPackageFromUI(transitivePackage, "2.0.0");
             uiwindow.UninstallPackageFromUI(transitivePackage);
             uiwindow.SearchPackageFromUI(transitivePackage);
+            solutionService.Build();
 
             // Assert
             VisualStudio.AssertNoErrors();
