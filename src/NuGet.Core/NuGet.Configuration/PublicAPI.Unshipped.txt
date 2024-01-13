@@ -3,3 +3,5 @@
 ~NuGet.Configuration.SettingItem.GetAttributes() -> System.Collections.Generic.IReadOnlyDictionary<string, string>
 ~NuGet.Configuration.Settings.GetAllSettingSections() -> System.Collections.Generic.IEnumerable<string>
 ~static NuGet.Configuration.ConfigurationConstants.GetConfigKeys() -> System.Collections.Generic.IReadOnlyList<string>
+~static readonly NuGet.Configuration.ConfigurationConstants.AuditForPackagesConfig -> string
+~static readonly NuGet.Configuration.ConfigurationConstants.AuditLevelForPackagesConfig -> string

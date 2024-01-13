@@ -17,6 +17,10 @@ namespace NuGet.Configuration
 
         public static readonly string ApiKeys = "apikeys";
 
+        public static readonly string AuditForPackagesConfig = "auditForPackagesConfig";
+
+        public static readonly string AuditLevelForPackagesConfig = "auditLevelForPackagesConfig";
+
         public static readonly string Author = "author";
 
         public static readonly string BeginIgnoreMarker = "NUGET: BEGIN LICENSE TEXT";
