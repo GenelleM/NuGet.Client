@@ -26,12 +26,7 @@ namespace NuGet.PackageManagement
         private readonly SourceCacheContext _sourceCacheContext;
         private readonly PackageVulnerabilitySeverity _minSeverity;
 
-        // if not enabled never call, right? Should we provide that information in the restore information event?
         // Send telemetry similar to the package reference once. where does this get called?
-        // Can I use the same `SourceRepository` as the PackageReference projects?
-        // What do we need form a configuration perspective?
-        // Enabled and then what? Min Severity?
-        // Should the nuget.config setting be respected everywhere? 
         public AuditUtility(
             PackageVulnerabilitySeverity minSeverity,
             IEnumerable<PackageRestoreData> packages,
@@ -48,12 +43,12 @@ namespace NuGet.PackageManagement
 
         public async Task CheckPackageVulnerabilitiesAsync(CancellationToken cancellationToken, Dictionary<string, object> metrics)
         {
-            metrics["Severity"] = (int)_minSeverity;
+            metrics["Audit.PC.Severity"] = (int)_minSeverity;
 
             Stopwatch stopwatch = Stopwatch.StartNew();
             GetVulnerabilityInfoResult? allVulnerabilityData = await GetAllVulnerabilityDataAsync(_sourceRepositories, _sourceCacheContext, _logger, metrics, cancellationToken);
             stopwatch.Stop();
-            metrics["DownloadDurationSeconds"] = stopwatch.Elapsed.TotalSeconds;
+            metrics["Audit.PC.DownloadDurationSeconds"] = stopwatch.Elapsed.TotalSeconds;
 
             if (allVulnerabilityData?.Exceptions is not null)
             {
@@ -77,10 +72,14 @@ namespace NuGet.PackageManagement
                                                     metrics);
             if (packagesWithKnownVulnerabilities is not null)
             {
-                CreateWarningsForPackagesWithVulnerabilities(packagesWithKnownVulnerabilities, _logger);
+                var warnings = CreateWarnings(packagesWithKnownVulnerabilities);
+                foreach (var warning in warnings)
+                {
+                    _logger.Log(warning);
+                }
             }
             stopwatch.Stop();
-            metrics["CheckPackagesDurationSeconds"] = stopwatch.Elapsed.TotalSeconds;
+            metrics["Audit.PC.CheckPackagesDurationSeconds"] = stopwatch.Elapsed.TotalSeconds;
 
             static bool IsAnyVulnerabilityDataFound(IReadOnlyList<IReadOnlyDictionary<string, IReadOnlyList<PackageVulnerabilityInfo>>>? knownVulnerabilities)
             {
@@ -140,7 +139,7 @@ namespace NuGet.PackageManagement
                 }
             }
 
-            metrics[nameof(SourcesWithVulnerabilityData)] = SourcesWithVulnerabilityData;
+            metrics["Audit.PC." + nameof(SourcesWithVulnerabilityData)] = SourcesWithVulnerabilityData;
 
             GetVulnerabilityInfoResult? final =
                 knownVulnerabilities != null || errors != null
@@ -150,18 +149,30 @@ namespace NuGet.PackageManagement
 
             static async Task<GetVulnerabilityInfoResult?> GetVulnerabilityInfoAsync(SourceRepository source, SourceCacheContext cacheContext, ILogger logger)
             {
-                IVulnerabilityInfoResource vulnerabilityInfoResource =
-                    await source.GetResourceAsync<IVulnerabilityInfoResource>(CancellationToken.None);
-                if (vulnerabilityInfoResource is null)
+                try
                 {
-                    return null;
+                    IVulnerabilityInfoResource vulnerabilityInfoResource =
+                        await source.GetResourceAsync<IVulnerabilityInfoResource>(CancellationToken.None);
+                    if (vulnerabilityInfoResource is null)
+                    {
+                        return null;
+                    }
+                    return await vulnerabilityInfoResource.GetVulnerabilityInfoAsync(cacheContext, logger, CancellationToken.None);
                 }
-                return await vulnerabilityInfoResource.GetVulnerabilityInfoAsync(cacheContext, logger, CancellationToken.None);
+                catch (Exception ex)
+                {
+                    return new GetVulnerabilityInfoResult(null, new AggregateException(ex));
+                }
             }
         }
-
-        internal static void CreateWarningsForPackagesWithVulnerabilities(Dictionary<PackageIdentity, PackageAuditInfo> packagesWithKnownVulnerabilities, ILogger logger)
+        internal static IList<LogMessage> CreateWarnings(Dictionary<PackageIdentity, PackageAuditInfo> packagesWithKnownVulnerabilities)
         {
+            if (packagesWithKnownVulnerabilities.Count == 0)
+            {
+                return Array.Empty<LogMessage>();
+            }
+
+            var warnings = new List<LogMessage>();
             foreach ((PackageIdentity package, PackageAuditInfo auditInfo) in packagesWithKnownVulnerabilities.OrderBy(p => p.Key.Id))
             {
                 foreach (PackageVulnerabilityInfo vulnerability in auditInfo.Vulnerabilities)
@@ -172,13 +183,17 @@ namespace NuGet.PackageManagement
                         package.Version.ToNormalizedString(),
                         severityLabel,
                         vulnerability.Url);
-                    var restoreLogMessage =
-                        RestoreLogMessage.CreateWarning(logCode,
-                        message,
-                        package.Id);
-                    logger.Log(restoreLogMessage);
+
+                    foreach (var projectPath in auditInfo.Projects)
+                    {
+                        var restoreLogMessage =
+                            LogMessage.CreateWarning(logCode, message);
+                        restoreLogMessage.ProjectPath = projectPath;
+                        warnings.Add(restoreLogMessage);
+                    }
                 }
             }
+            return warnings;
         }
 
         internal static Dictionary<PackageIdentity, PackageAuditInfo>? FindPackagesWithKnownVulnerabilities(
@@ -202,7 +217,7 @@ namespace NuGet.PackageManagement
                 {
                     foreach (PackageVulnerabilityInfo knownVulnerability in knownVulnerabilitiesForPackage)
                     {
-                        if ((int)knownVulnerability.Severity < (int)minSeverity && knownVulnerability.Severity != PackageVulnerabilitySeverity.Unknown) 
+                        if ((int)knownVulnerability.Severity < (int)minSeverity && knownVulnerability.Severity != PackageVulnerabilitySeverity.Unknown)
                         {
                             continue;
                         }
@@ -218,7 +233,7 @@ namespace NuGet.PackageManagement
 
                         if (!result.TryGetValue(packageIdentity, out PackageAuditInfo? auditInfo))
                         {
-                            auditInfo = new(packageIdentity);
+                            auditInfo = new(packageIdentity, packageRestoreData.ProjectNames);
                             result.Add(packageIdentity, auditInfo);
                         }
 
@@ -227,13 +242,13 @@ namespace NuGet.PackageManagement
                 }
             }
             var PackagesWithAdvisory = result?.Keys?.Select(e => e.Id).ToList();
-            metrics[nameof(Sev0Matches)] = Sev0Matches;
-            metrics[nameof(Sev1Matches)] = Sev1Matches;
-            metrics[nameof(Sev2Matches)] = Sev2Matches;
-            metrics[nameof(Sev3Matches)] = Sev3Matches;
-            metrics[nameof(InvalidSevMatches)] = InvalidSevMatches; // TODO NK - Is this a thing?
+            metrics["Audit.PC." + nameof(Sev0Matches)] = Sev0Matches;
+            metrics["Audit.PC." + nameof(Sev1Matches)] = Sev1Matches;
+            metrics["Audit.PC." + nameof(Sev2Matches)] = Sev2Matches;
+            metrics["Audit.PC." + nameof(Sev3Matches)] = Sev3Matches;
+            metrics["Audit.PC." + nameof(InvalidSevMatches)] = InvalidSevMatches; // TODO NK - Is this a thing?
             // TODO NK - Add packages severity with PII?
-
+            // TODO NK - Don't fail the complete build.
             return result;
         }
 
@@ -282,12 +297,16 @@ namespace NuGet.PackageManagement
         internal class PackageAuditInfo
         {
             public PackageIdentity Identity { get; }
+
+            public IEnumerable<string> Projects { get; }
+
             public List<PackageVulnerabilityInfo> Vulnerabilities { get; }
 
-            public PackageAuditInfo(PackageIdentity identity)
+            public PackageAuditInfo(PackageIdentity identity, IEnumerable<string> projects)
             {
                 Identity = identity;
                 Vulnerabilities = new();
+                Projects = projects;
             }
         }
     }

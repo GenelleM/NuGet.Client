@@ -366,7 +366,11 @@ namespace NuGet.PackageManagement
 
             ActivityCorrelationId.StartNew();
 
+            List<SourceRepository> sourceRepositories = packageRestoreContext.SourceRepositories.AsList();
+            await RunAudit(packageRestoreContext, downloadContext, sourceRepositories);
+
             var missingPackages = packageRestoreContext.Packages.Where(p => p.IsMissing).ToList();
+
             if (!missingPackages.Any())
             {
                 return new PackageRestoreResult(true, Enumerable.Empty<PackageIdentity>());
@@ -381,7 +385,6 @@ namespace NuGet.PackageManagement
 
             packageRestoreContext.Token.ThrowIfCancellationRequested();
 
-            List<SourceRepository> sourceRepositories = packageRestoreContext.SourceRepositories.AsList(); // Are these shared with PackageReference?
             foreach (SourceRepository enabledSource in sourceRepositories)
             {
                 PackageSource source = enabledSource.PackageSource;
@@ -398,25 +401,6 @@ namespace NuGet.PackageManagement
                 downloadContext);
 
             packageRestoreContext.Token.ThrowIfCancellationRequested();
-
-            // TODO NK: This will probably be a part of the NuGet Restore Context.
-            var settings = NullSettings.Instance;
-            bool auditEnabled = IsAuditEnabled(SettingsUtility.GetConfigValue(settings, ConfigurationConstants.AuditForPackagesConfig));
-            var severity = GetAuditSeverity(SettingsUtility.GetConfigValue(settings, ConfigurationConstants.AuditLevelForPackagesConfig));
-
-            Dictionary<string, object> metrics = new();
-
-            if (attemptedPackages.Any() && auditEnabled)
-            {
-                var auditUtility = new AuditUtility(
-                    minSeverity: severity,
-                    packageRestoreContext.Packages,
-                    sourceRepositories,
-                    downloadContext.SourceCacheContext,
-                    packageRestoreContext.Logger);
-                await auditUtility.CheckPackageVulnerabilitiesAsync(packageRestoreContext.Token, metrics);
-                // Do we want to have a package vulnerability result? This would allow it to be called at install time.
-            }
 
             await ThrottledCopySatelliteFilesAsync(
                 hashSetOfMissingPackageReferences,
@@ -441,6 +425,27 @@ namespace NuGet.PackageManagement
                     severity = PackageVulnerabilitySeverity.Low;
                 }
                 return severity;
+            }
+
+            static async Task RunAudit(PackageRestoreContext packageRestoreContext, PackageDownloadContext downloadContext, List<SourceRepository> sourceRepositories)
+            {
+                var settings = NullSettings.Instance;
+                bool auditEnabled = IsAuditEnabled(SettingsUtility.GetConfigValue(settings, ConfigurationConstants.AuditForPackagesConfig));
+                var severity = GetAuditSeverity(SettingsUtility.GetConfigValue(settings, ConfigurationConstants.AuditLevelForPackagesConfig));
+
+                Dictionary<string, object> metrics = new();
+
+                if (auditEnabled)
+                {
+                    var auditUtility = new AuditUtility(
+                        minSeverity: severity,
+                        packageRestoreContext.Packages,
+                        sourceRepositories,
+                        downloadContext.SourceCacheContext,
+                        packageRestoreContext.Logger);
+                    await auditUtility.CheckPackageVulnerabilitiesAsync(packageRestoreContext.Token, metrics);
+                    // Do we want to have a package vulnerability result? This would allow it to be called at install time.
+                }
             }
         }
 
