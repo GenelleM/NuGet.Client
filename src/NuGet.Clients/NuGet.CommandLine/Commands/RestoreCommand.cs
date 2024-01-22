@@ -264,9 +264,36 @@ namespace NuGet.CommandLine
             var sourceRepositoryProvider = new CommandLineSourceRepositoryProvider(SourceProvider);
             var nuGetPackageManager = new NuGetPackageManager(sourceRepositoryProvider, Settings, packagesFolderPath);
 
-            var installedPackageReferences = new HashSet<Packaging.PackageReference>(PackageReferenceComparer.Instance);
+            // TODO NK: Use PackageRestoreData instead, since it can log better errors anyways.
+            var installedPackageReferences = new HashSet<PackageReference>(PackageReferenceComparer.Instance);
+
+            List<PackageRestoreData> allPackageRestoreData = new();
+
+            var configToProjectPath = new Dictionary<string, string>();
+            foreach (var project in packageRestoreInputs.ProjectReferenceLookup.Projects)
+            {
+                if (project.RestoreMetadata?.ProjectStyle == ProjectStyle.PackagesConfig)
+                {
+                    configToProjectPath.Add(((PackagesConfigProjectRestoreMetadata)project.RestoreMetadata).PackagesConfigPath, project.FilePath);
+                }
+            }
+            var morePackageRestoreData = new Dictionary<PackageReference, PackageRestoreData>(PackageReferenceComparer.Instance);
+
+
             if (packageRestoreInputs.RestoringWithSolutionFile)
             {
+                foreach (string configFile in packageRestoreInputs.PackagesConfigFiles)
+                {
+                    var installedPackages = GetInstalledPackageReferences(configFile, allowDuplicatePackageIds: true);
+                    foreach (var packageReference in installedPackages)
+                    {
+                        if (morePackageRestoreData.TryGetValue(packageReference, out PackageRestoreData value))
+                        {
+                            value.ProjectNames
+                        }
+                    }
+                }
+
                 installedPackageReferences.AddRange(packageRestoreInputs
                     .PackagesConfigFiles
                     .SelectMany(file => GetInstalledPackageReferences(file, allowDuplicatePackageIds: true)));
@@ -307,6 +334,7 @@ namespace NuGet.CommandLine
 
             if (missingPackageReferences.Length == 0)
             {
+                // Do the audit check.
                 var message = string.Format(
                     CultureInfo.CurrentCulture,
                     LocalizedResourceManager.GetString("InstallCommandNothingToInstall"),

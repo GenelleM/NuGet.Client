@@ -444,7 +444,6 @@ namespace NuGet.PackageManagement
                         downloadContext.SourceCacheContext,
                         packageRestoreContext.Logger);
                     await auditUtility.CheckPackageVulnerabilitiesAsync(packageRestoreContext.Token, metrics);
-                    // Do we want to have a package vulnerability result? This would allow it to be called at install time.
                 }
             }
         }
