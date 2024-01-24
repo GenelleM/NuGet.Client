@@ -264,39 +264,49 @@ namespace NuGet.CommandLine
             var sourceRepositoryProvider = new CommandLineSourceRepositoryProvider(SourceProvider);
             var nuGetPackageManager = new NuGetPackageManager(sourceRepositoryProvider, Settings, packagesFolderPath);
 
-            // TODO NK: Use PackageRestoreData instead, since it can log better errors anyways.
-            var installedPackageReferences = new HashSet<PackageReference>(PackageReferenceComparer.Instance);
+            // EffectivePackageSaveMode is None when -PackageSaveMode is not provided by the user. None is treated as
+            // Defaultv3 for V3 restore and should be treated as Defaultv2 for V2 restore. This is the case in the
+            // actual V2 restore flow and should match in this preliminary missing packages check.
+            var packageSaveMode = EffectivePackageSaveMode == Packaging.PackageSaveMode.None ?
+                Packaging.PackageSaveMode.Defaultv2 :
+                EffectivePackageSaveMode;
 
-            List<PackageRestoreData> allPackageRestoreData = new();
-
-            var configToProjectPath = new Dictionary<string, string>();
-            foreach (var project in packageRestoreInputs.ProjectReferenceLookup.Projects)
-            {
-                if (project.RestoreMetadata?.ProjectStyle == ProjectStyle.PackagesConfig)
-                {
-                    configToProjectPath.Add(((PackagesConfigProjectRestoreMetadata)project.RestoreMetadata).PackagesConfigPath, project.FilePath);
-                }
-            }
-            var morePackageRestoreData = new Dictionary<PackageReference, PackageRestoreData>(PackageReferenceComparer.Instance);
-
+            List<PackageRestoreData> packageRestoreData = new();
 
             if (packageRestoreInputs.RestoringWithSolutionFile)
             {
+                var configToProjectPath = new Dictionary<string, string>();
+                foreach (var project in packageRestoreInputs.ProjectReferenceLookup.Projects)
+                {
+                    if (project.RestoreMetadata?.ProjectStyle == ProjectStyle.PackagesConfig)
+                    {
+                        configToProjectPath.Add(((PackagesConfigProjectRestoreMetadata)project.RestoreMetadata).PackagesConfigPath, project.FilePath);
+                    }
+                }
+
+                var packageReferenceToProjects = new Dictionary<PackageReference, List<string>>(PackageReferenceComparer.Instance);
+
                 foreach (string configFile in packageRestoreInputs.PackagesConfigFiles)
                 {
-                    var installedPackages = GetInstalledPackageReferences(configFile, allowDuplicatePackageIds: true);
-                    foreach (var packageReference in installedPackages)
+                    foreach (PackageReference packageReference in GetInstalledPackageReferences(configFile, allowDuplicatePackageIds: true))
                     {
-                        if (morePackageRestoreData.TryGetValue(packageReference, out PackageRestoreData value))
+                        if (packageReferenceToProjects.TryGetValue(packageReference, out List<string> value))
                         {
-                            value.ProjectNames
+                            if (configToProjectPath.TryGetValue(configFile, out string projectPath))
+                            {
+                                projectPath = configFile;
+                            }
+                            value.Add(projectPath);
                         }
                     }
                 }
 
-                installedPackageReferences.AddRange(packageRestoreInputs
-                    .PackagesConfigFiles
-                    .SelectMany(file => GetInstalledPackageReferences(file, allowDuplicatePackageIds: true)));
+                foreach (KeyValuePair<PackageReference, List<string>> package in packageReferenceToProjects)
+                {
+                    var exists = nuGetPackageManager.PackageExistsInPackagesFolder(package.Key.PackageIdentity, packageSaveMode);
+                    packageRestoreData.Add(new PackageRestoreData(package.Key, package.Value, !exists));
+                }
+
             }
             else if (packageRestoreInputs.PackagesConfigFiles.Count > 0)
             {
@@ -318,19 +328,14 @@ namespace NuGet.CommandLine
                     throw new InvalidOperationException(message);
                 }
 
-                installedPackageReferences.AddRange(
-                    GetInstalledPackageReferences(packageReferenceFile, allowDuplicatePackageIds: true));
+                foreach (PackageReference packageReference in GetInstalledPackageReferences(packageReferenceFile, allowDuplicatePackageIds: true))
+                {
+                    bool exists = nuGetPackageManager.PackageExistsInPackagesFolder(packageReference.PackageIdentity, packageSaveMode);
+                    packageRestoreData.Add(new PackageRestoreData(packageReference, [packageReferenceFile], !exists));
+                }
             }
 
-            // EffectivePackageSaveMode is None when -PackageSaveMode is not provided by the user. None is treated as
-            // Defaultv3 for V3 restore and should be treated as Defaultv2 for V2 restore. This is the case in the
-            // actual V2 restore flow and should match in this preliminary missing packages check.
-            var packageSaveMode = EffectivePackageSaveMode == Packaging.PackageSaveMode.None ?
-                Packaging.PackageSaveMode.Defaultv2 :
-                EffectivePackageSaveMode;
-
-            var missingPackageReferences = installedPackageReferences.Where(reference =>
-                !nuGetPackageManager.PackageExistsInPackagesFolder(reference.PackageIdentity, packageSaveMode)).ToArray();
+            var missingPackageReferences = packageRestoreData.Where(reference => reference.IsMissing).ToArray();
 
             if (missingPackageReferences.Length == 0)
             {
@@ -357,14 +362,6 @@ namespace NuGet.CommandLine
 
                 return restoreSummaries;
             }
-
-            var packageRestoreData = missingPackageReferences.Select(reference =>
-                new PackageRestoreData(
-                    reference,
-                    new[] { packageRestoreInputs.RestoringWithSolutionFile
-                                ? packageRestoreInputs.DirectoryOfSolutionFile
-                                : packageRestoreInputs.PackagesConfigFiles[0] },
-                    isMissing: true));
 
             var packageSources = GetPackageSources(Settings);
 
